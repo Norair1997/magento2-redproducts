@@ -1,26 +1,33 @@
-<h1><?php echo $this->getHelloWorldTxt(); ?></h1>
 <style>
-    .flex-container {
+    .box-container {
         display: flex;
         flex-wrap: wrap;
         width: 100%;
     }
 
     .box {
-        box-shadow: 2px 2px 2px 0px #222;
+        position: relative;
         flex: 1;
         width: 100%;
-        min-width: 20vmin;
+        min-width: 30vmin;
         box-shadow: 0 2px 3px 0 rgba(0,0,0,.14),0 3px 2px -2px rgba(0,0,0,.2),0 1px 5px 0 rgba(0,0,0,.12);
-        margin: 2vmin 4vmin 2vmin 4vmin;
+        margin: 2vmin;
         padding: 2vmin;
         cursor: pointer;
         text-align: center;
-        transition: 0.2s transform;
+        box-sizing: border-box;
+        transition: 0.2s transform, 0.2s box-shadow;
+        will-change: transform;
     }
 
     .box:hover {
         transform: scale(1.1);
+        box-shadow: 0 4px 6px 0 rgba(0,0,0,.2),0 5px 5px -2px rgba(0,0,0,.25),0 2px 9px 0 rgba(0,0,0,.2);
+    }
+
+    .box:hover .addCart {
+        opacity: 1;
+        visibility: visible;
     }
 
     .box img {
@@ -28,26 +35,90 @@
         margin-right: auto;
         display: block;
     }
+
+    .pricetag {
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: 1vmin;
+        color: #607D8B;
+        font-weight: 800;
+    }
+
+    .addCart {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        background-color: rgba(0,0,0,0.3);
+        opacity: 0;
+        visibility: hidden;
+        transition: 0.2s opacity;
+    }
+
+    .addCart span {
+        position: absolute;
+        width: 100%;
+        box-sizing: border-box;
+        bottom: 0;
+        left: 0;
+        padding: 1.6vmin;
+        background-color: #607D8B;
+        color: white;
+        font-weight: 800;
+        transition: 0.2s color, 0.2s background-color;
+    }
+
+    .addCart span:hover {
+        color: #607D8B;
+        background-color: #fff;
+    }
 </style>
-<div class="flex-container">
+
+<h1><?php echo $this->getHelloWorldTxt(); ?></h1>
+
+<div class="box-container">
     <?php
     $products = $this->getProductsData();
+    $SKUs = [];
+    $length = count($products);
+    // das '0'te product existiert nicht...undefined offset 0 ...deshalb geht das array von $length bis index 1
+    for (;$length > 0; $length--) {
+        $product = $products[$length];
 
-    foreach ($products as $product) {
-        #$product = $products[$len];
         $color = $product->getResource()->getAttribute('color')->getFrontend()->getValue($product);
         if ($color === "Red") {
-            echo "<div class='box'>";
-            $productImageUrl = $this->getUrl('pub/media/catalog').'product'.$product->getImage();
-            echo "<img width='100px' src='$productImageUrl'>";
-            echo "<br><p>".$product->getName()."</p>";
-            echo "</div>\n";
+            $sku = $product->getSku();
+            $skuFirstSlice = explode("-", $sku);
+            // die Zeichenkette von dem SKU ist bis zum ersten '-' eindeutig...dabei spielt die Größe/Farbe von dem Produkttyp keine rolle
+            // erst nach dem '-' sind Größe und Farbe angegeben
+            // 
+            // dieses SKU-Teil wird mit dem Letzten hinzugefügten verglichen...wenn es nicht dem Letzten entspricht => neues Produkt
+            // (das funktioniert nur wenn die produkte nacheinander im array geordnet sind)
+            if ($skuFirstSlice[0] !== end($SKUs)) {
+                // sobald wieder ein neues Produkt(SKU neu) da ist, wird das dem Array hinzugefügt
+                array_push($SKUs, $skuFirstSlice[0]);
+                
+                echo "<div class='box'>";
+                #echo "ID: ".$product->getId();
+                $productImageUrl = $this->getUrl('pub/media/catalog').'product'.$product->getImage();
+                echo "<img width='100%' src='$productImageUrl'>";
+                $productName = explode("-", $product->getName());
+                echo "<br><p>".$productName[0]."</p>";
+                echo "<span class='pricetag'>".$product->getFinalPrice()."&euro;</span>";
+                #echo $product->toString();
+                #echo "<br><p>".$product->getAttributeText('size')."</p>";
+                echo "<div class='addCart'><span>Add to cart</span></div>";
+                echo "</div>\n";
+            }
         }
-    }
-    /*
-    $class_methods = get_class_methods($product);
-$this->getProductBySku("MH02-XS-Red"); // load product by SKU
 
+    }
+
+    /*
+    $this->getProductBySku("MH02-XS-Red"); // load product by SKU
+    $class_methods = get_class_methods($product);
     foreach ($class_methods as $method_name) {
         echo "<br> $method_name ";
     }
